@@ -2,6 +2,7 @@ import { Address, BigInt, log } from "@graphprotocol/graph-ts";
 import {
   PlainPoolDeployed,
   MetaPoolDeployed,
+  StableSwapFactory,
 } from "../../generated/StableSwapFactory/StableSwapFactory";
 import {
   TwocryptoPoolDeployed,
@@ -27,7 +28,11 @@ import { ZERO_BI, ZERO_BD, ONE_BI } from "../utils/constants";
  * Best Practice: Create normalized entities with foreign keys
  */
 export function handlePlainPoolDeployed(event: PlainPoolDeployed): void {
-  let poolAddress = event.params.pool;
+  // Get pool address from factory contract (pool is not in event params)
+  let factory = StableSwapFactory.bind(event.address);
+  let poolCount = factory.pool_count();
+  let poolAddress = factory.pool_list(poolCount.minus(BigInt.fromI32(1)));
+  
   let coins = event.params.coins;
   
   // Create pool entity
@@ -102,7 +107,11 @@ export function handlePlainPoolDeployed(event: PlainPoolDeployed): void {
  * Handle StableSwap Meta Pool Deployed
  */
 export function handleMetaPoolDeployed(event: MetaPoolDeployed): void {
-  let poolAddress = event.params.pool;
+  // Get pool address from factory contract (pool is not in event params)
+  let factory = StableSwapFactory.bind(event.address);
+  let poolCount = factory.pool_count();
+  let poolAddress = factory.pool_list(poolCount.minus(BigInt.fromI32(1)));
+  
   let coin = event.params.coin;
   let basePool = event.params.base_pool;
   

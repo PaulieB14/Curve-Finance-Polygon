@@ -27,7 +27,7 @@ dataSources:
         - name: ERC20
           file: ./abis/ERC20.json
       eventHandlers:
-        - event: PlainPoolDeployed(address[4],uint256,uint256,address)
+        - event: PlainPoolDeployed(address[],uint256,uint256,address)
           handler: handlePlainPoolDeployed
         - event: MetaPoolDeployed(address,address,uint256,uint256,address)
           handler: handleMetaPoolDeployed
