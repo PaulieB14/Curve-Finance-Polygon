@@ -22,6 +22,7 @@ import {
 } from "../utils/entities";
 import { ZERO_BI, ZERO_BD, ONE_BI } from "../utils/constants";
 import { convertTokenToDecimal } from "../utils/helpers";
+import { getAverageSwapPriceUSD, getAmountInUSD } from "../utils/pricing";
 
 /**
  * Handle Token Exchange (Swap)
@@ -103,8 +104,15 @@ export function handleTokenExchange(event: TokenExchange): void {
     boughtToken.decimals
   );
   
-  // Calculate USD value (simplified - would use price oracle in production)
-  swap.amountUSD = ZERO_BD;
+  // Calculate USD value using Curve-style stablecoin pricing
+  swap.amountUSD = getAverageSwapPriceUSD(
+    Address.fromString(soldToken.address.toHexString()),
+    event.params.tokens_sold,
+    soldToken.decimals,
+    Address.fromString(boughtToken.address.toHexString()),
+    event.params.tokens_bought,
+    boughtToken.decimals
+  );
   
   // Metadata
   swap.block = event.block.number;
@@ -117,16 +125,25 @@ export function handleTokenExchange(event: TokenExchange): void {
   pool.swapCount = pool.swapCount.plus(ONE_BI);
   pool.txCount = pool.txCount.plus(ONE_BI);
   pool.cumulativeVolume = pool.cumulativeVolume.plus(swap.tokensSold);
-  // pool.cumulativeVolumeUSD would be updated with price oracle
+  // Only add to volume if swap has USD value (non-zero)
+  if (!swap.amountUSD.equals(ZERO_BD)) {
+    pool.cumulativeVolumeUSD = pool.cumulativeVolumeUSD.plus(swap.amountUSD);
+  }
   pool.save();
   
   // Update user metrics (Best Practice: Aggregate instead of arrays)
   user.swapCount = user.swapCount.plus(ONE_BI);
+  if (!swap.amountUSD.equals(ZERO_BD)) {
+    user.totalVolumeUSD = user.totalVolumeUSD.plus(swap.amountUSD);
+  }
   user.save();
   
   // Update protocol metrics
   let protocol = getOrCreateProtocol();
   protocol.txCount = protocol.txCount.plus(ONE_BI);
+  if (!swap.amountUSD.equals(ZERO_BD)) {
+    protocol.totalVolumeUSD = protocol.totalVolumeUSD.plus(swap.amountUSD);
+  }
   protocol.save();
   
   log.info("Swap processed: {} for pool {}", [swapId, pool.id]);
@@ -195,13 +212,22 @@ export function handleAddLiquidity(event: AddLiquidity): void {
       tokenAmounts[i],
       token.decimals
     );
-    liquidityTokenAmount.amountUSD = null;
+    
+    // Calculate USD value
+    liquidityTokenAmount.amountUSD = getAmountInUSD(
+      Address.fromString(token.address.toHexString()),
+      tokenAmounts[i],
+      token.decimals
+    );
     liquidityTokenAmount.fee = ZERO_BD;
     
     liquidityTokenAmount.save();
     
-    // Update PoolToken balance
+    // Update PoolToken balance and USD value
     poolToken.balance = poolToken.balance.plus(liquidityTokenAmount.amount);
+    if (liquidityTokenAmount.amountUSD && !liquidityTokenAmount.amountUSD.equals(ZERO_BD)) {
+      poolToken.balanceUSD = poolToken.balanceUSD.plus(liquidityTokenAmount.amountUSD);
+    }
     poolToken.save();
   }
   
@@ -289,13 +315,22 @@ export function handleRemoveLiquidity(event: RemoveLiquidity): void {
       tokenAmounts[i],
       token.decimals
     );
-    liquidityTokenAmount.amountUSD = null;
+    
+    // Calculate USD value
+    liquidityTokenAmount.amountUSD = getAmountInUSD(
+      Address.fromString(token.address.toHexString()),
+      tokenAmounts[i],
+      token.decimals
+    );
     liquidityTokenAmount.fee = ZERO_BD;
     
     liquidityTokenAmount.save();
     
-    // Update PoolToken balance
+    // Update PoolToken balance and USD value
     poolToken.balance = poolToken.balance.minus(liquidityTokenAmount.amount);
+    if (liquidityTokenAmount.amountUSD && !liquidityTokenAmount.amountUSD.equals(ZERO_BD)) {
+      poolToken.balanceUSD = poolToken.balanceUSD.minus(liquidityTokenAmount.amountUSD);
+    }
     poolToken.save();
   }
   

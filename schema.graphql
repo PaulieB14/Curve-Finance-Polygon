@@ -133,7 +133,7 @@ type Swap @entity(immutable: true) {
   # Amounts
   tokensSold: BigDecimal!
   tokensBought: BigDecimal!
-  amountUSD: BigDecimal
+  amountUSD: BigDecimal!
   
   # Metadata
   block: BigInt!
@@ -151,7 +151,7 @@ type LiquidityTokenAmount @entity(immutable: true) {
   token: Token!
   index: Int!
   amount: BigDecimal!
-  amountUSD: BigDecimal
+  amountUSD: BigDecimal!
   fee: BigDecimal
 }
 
