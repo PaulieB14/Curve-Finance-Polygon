@@ -1,0 +1,26 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": false, "name": "coins", "type": "address[4]"},
+      {"indexed": false, "name": "A", "type": "uint256"},
+      {"indexed": false, "name": "fee", "type": "uint256"},
+      {"indexed": false, "name": "pool", "type": "address"}
+    ],
+    "name": "PlainPoolDeployed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": false, "name": "coin", "type": "address"},
+      {"indexed": false, "name": "base_pool", "type": "address"},
+      {"indexed": false, "name": "A", "type": "uint256"},
+      {"indexed": false, "name": "fee", "type": "uint256"},
+      {"indexed": false, "name": "pool", "type": "address"}
+    ],
+    "name": "MetaPoolDeployed",
+    "type": "event"
+  }
+]
+

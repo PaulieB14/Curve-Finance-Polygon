@@ -1,0 +1,328 @@
+"""
+Curve Finance Protocol - Optimized for efficient storage
+"""
+type CurveProtocol @entity(immutable: false) {
+  id: ID!
+  poolCount: BigInt!
+  totalVolume: BigDecimal!
+  totalVolumeUSD: BigDecimal!
+  totalValueLocked: BigDecimal!
+  totalValueLockedUSD: BigDecimal!
+  totalFees: BigDecimal!
+  totalFeesUSD: BigDecimal!
+  txCount: BigInt!
+  userCount: BigInt!
+  
+  # Relations using @derivedFrom (Best Practice #1)
+  pools: [Pool!]! @derivedFrom(field: "protocol")
+  dailySnapshots: [ProtocolDaySnapshot!]! @derivedFrom(field: "protocol")
+}
+
+"""
+Pool Types: StableSwap, TwoCrypto, TriCrypto
+"""
+enum PoolType {
+  STABLESWAP
+  TWOCRYPTO
+  TRICRYPTO
+}
+
+"""
+Token - Normalized entity
+"""
+type Token @entity(immutable: false) {
+  id: ID! # token address
+  address: Bytes!
+  symbol: String!
+  name: String!
+  decimals: Int!
+  
+  # Price tracking
+  lastPriceUSD: BigDecimal
+  lastPriceBlock: BigInt
+  
+  # Relations using @derivedFrom (Best Practice #1)
+  poolTokens: [PoolToken!]! @derivedFrom(field: "token")
+}
+
+"""
+Pool-Token relationship (Best Practice #6 - Normalization)
+Instead of arrays of tokens in Pool, use separate entity
+"""
+type PoolToken @entity(immutable: false) {
+  id: ID! # pool address + token address + index
+  pool: Pool!
+  token: Token!
+  index: Int!
+  balance: BigDecimal!
+  balanceUSD: BigDecimal!
+  
+  # Metadata
+  isUnderlying: Boolean!
+  rate: BigDecimal
+}
+
+"""
+Liquidity Pool - Foreign keys instead of arrays
+"""
+type Pool @entity(immutable: false) {
+  id: ID! # pool address
+  protocol: CurveProtocol!
+  address: Bytes!
+  name: String!
+  symbol: String
+  poolType: PoolType!
+  
+  # LP Token
+  lpToken: Bytes!
+  lpTokenSupply: BigDecimal!
+  
+  # Pool Parameters
+  A: BigInt
+  fee: BigInt!
+  adminFee: BigInt!
+  offpegFeeMultiplier: BigInt
+  
+  # Pricing
+  virtualPrice: BigDecimal!
+  
+  # Liquidity (aggregated from PoolToken entities)
+  totalValueLocked: BigDecimal!
+  totalValueLockedUSD: BigDecimal!
+  
+  # Volume & Fees
+  cumulativeVolume: BigDecimal!
+  cumulativeVolumeUSD: BigDecimal!
+  cumulativeFees: BigDecimal!
+  cumulativeFeesUSD: BigDecimal!
+  
+  # Activity
+  txCount: BigInt!
+  swapCount: BigInt!
+  
+  # Metadata
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+  createdAtTransaction: Bytes!
+  
+  # Relations using @derivedFrom (Best Practice #1 - No large arrays)
+  tokens: [PoolToken!]! @derivedFrom(field: "pool")
+  swaps: [Swap!]! @derivedFrom(field: "pool")
+  liquidityEvents: [LiquidityEvent!]! @derivedFrom(field: "pool")
+  hourlySnapshots: [PoolHourSnapshot!]! @derivedFrom(field: "pool")
+  dailySnapshots: [PoolDaySnapshot!]! @derivedFrom(field: "pool")
+  positions: [Position!]! @derivedFrom(field: "pool")
+}
+
+"""
+Swap/Exchange Event - Foreign keys to related entities
+"""
+type Swap @entity(immutable: true) {
+  id: ID! # tx hash + log index
+  pool: Pool!
+  buyer: User!
+  receiver: Bytes!
+  transaction: Transaction!
+  
+  # Tokens (foreign keys, not arrays)
+  soldToken: Token!
+  boughtToken: Token!
+  soldId: Int!
+  boughtId: Int!
+  
+  # Amounts
+  tokensSold: BigDecimal!
+  tokensBought: BigDecimal!
+  amountUSD: BigDecimal
+  
+  # Metadata
+  block: BigInt!
+  timestamp: BigInt!
+  logIndex: BigInt!
+}
+
+"""
+Individual token amount in liquidity event (Best Practice #6)
+Separate entity to avoid arrays
+"""
+type LiquidityTokenAmount @entity(immutable: true) {
+  id: ID! # liquidity event id + token index
+  liquidityEvent: LiquidityEvent!
+  token: Token!
+  index: Int!
+  amount: BigDecimal!
+  amountUSD: BigDecimal
+  fee: BigDecimal
+}
+
+"""
+Liquidity Event (Add/Remove) - Foreign keys instead of arrays
+"""
+type LiquidityEvent @entity(immutable: true) {
+  id: ID! # tx hash + log index
+  pool: Pool!
+  provider: User!
+  transaction: Transaction!
+  type: LiquidityEventType!
+  
+  # LP tokens
+  lpTokenAmount: BigDecimal!
+  lpTokenSupply: BigDecimal!
+  
+  # Pool state
+  invariant: BigDecimal
+  
+  # Metadata
+  block: BigInt!
+  timestamp: BigInt!
+  logIndex: BigInt!
+  
+  # Relations using @derivedFrom (Best Practice #1)
+  tokenAmounts: [LiquidityTokenAmount!]! @derivedFrom(field: "liquidityEvent")
+}
+
+enum LiquidityEventType {
+  ADD
+  REMOVE
+  REMOVE_IMBALANCE
+  REMOVE_ONE
+}
+
+"""
+User Position in a Pool - Efficient storage
+"""
+type Position @entity(immutable: false) {
+  id: ID! # pool address + user address
+  pool: Pool!
+  user: User!
+  
+  # LP tokens
+  lpTokenBalance: BigDecimal!
+  
+  # Value
+  valueUSD: BigDecimal
+  
+  # Activity
+  depositCount: BigInt!
+  withdrawCount: BigInt!
+  
+  # Metadata
+  createdAt: BigInt!
+  updatedAt: BigInt!
+  updatedAtBlock: BigInt!
+  updatedAtTransaction: Bytes!
+}
+
+"""
+User - Foreign keys, no arrays
+"""
+type User @entity(immutable: false) {
+  id: ID! # user address
+  address: Bytes!
+  
+  # Activity metrics (aggregated, not arrays)
+  swapCount: BigInt!
+  liquidityEventCount: BigInt!
+  totalVolumeUSD: BigDecimal!
+  positionCount: BigInt!
+  
+  # Metadata
+  firstInteractionAt: BigInt!
+  lastInteractionAt: BigInt!
+  
+  # Relations using @derivedFrom (Best Practice #1)
+  positions: [Position!]! @derivedFrom(field: "user")
+  swaps: [Swap!]! @derivedFrom(field: "buyer")
+  liquidityEvents: [LiquidityEvent!]! @derivedFrom(field: "provider")
+}
+
+"""
+Transaction - Reusable entity
+"""
+type Transaction @entity(immutable: true) {
+  id: ID! # tx hash
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  gasUsed: BigInt
+  gasPrice: BigInt
+  
+  # Relations using @derivedFrom (Best Practice #1)
+  swaps: [Swap!]! @derivedFrom(field: "transaction")
+  liquidityEvents: [LiquidityEvent!]! @derivedFrom(field: "transaction")
+}
+
+"""
+Pool Hour Snapshot - No arrays for balances, use separate entities if needed
+"""
+type PoolHourSnapshot @entity(immutable: true) {
+  id: ID! # pool address + hour timestamp
+  pool: Pool!
+  hour: Int!
+  timestamp: BigInt!
+  
+  # Liquidity
+  tvl: BigDecimal!
+  tvlUSD: BigDecimal!
+  lpTokenSupply: BigDecimal!
+  virtualPrice: BigDecimal!
+  
+  # Volume & Fees (hourly deltas)
+  hourlyVolume: BigDecimal!
+  hourlyVolumeUSD: BigDecimal!
+  hourlyFees: BigDecimal!
+  hourlyFeesUSD: BigDecimal!
+  
+  # Activity (hourly deltas)
+  hourlyTxCount: BigInt!
+  hourlySwapCount: BigInt!
+  
+  # Note: For individual token balances, create PoolHourSnapshotToken entity
+  # to avoid arrays (Best Practice #1)
+}
+
+"""
+Pool Day Snapshot
+"""
+type PoolDaySnapshot @entity(immutable: true) {
+  id: ID! # pool address + day timestamp
+  pool: Pool!
+  day: Int!
+  timestamp: BigInt!
+  
+  # Liquidity
+  tvl: BigDecimal!
+  tvlUSD: BigDecimal!
+  lpTokenSupply: BigDecimal!
+  virtualPrice: BigDecimal!
+  
+  # Volume & Fees (daily deltas)
+  dailyVolume: BigDecimal!
+  dailyVolumeUSD: BigDecimal!
+  dailyFees: BigDecimal!
+  dailyFeesUSD: BigDecimal!
+  
+  # Activity (daily deltas)
+  dailyTxCount: BigInt!
+  dailySwapCount: BigInt!
+  dailyUserCount: BigInt!
+}
+
+"""
+Protocol Day Snapshot
+"""
+type ProtocolDaySnapshot @entity(immutable: true) {
+  id: ID! # day timestamp
+  protocol: CurveProtocol!
+  day: Int!
+  timestamp: BigInt!
+  
+  # Protocol metrics
+  totalValueLockedUSD: BigDecimal!
+  dailyVolumeUSD: BigDecimal!
+  dailyFeesUSD: BigDecimal!
+  dailyTxCount: BigInt!
+  dailyUserCount: BigInt!
+  dailySwapCount: BigInt!
+  poolCount: BigInt!
+  totalUserCount: BigInt!
+}

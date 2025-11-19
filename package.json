@@ -1,0 +1,18 @@
+{
+  "name": "curve-finance-polygon",
+  "version": "0.1.0",
+  "description": "Curve Finance Polygon Subgraph",
+  "repository": "https://github.com/curve-finance-polygon/subgraph",
+  "license": "MIT",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy curve-finance-polygon",
+    "auth": "graph auth --studio 197473b84a136c4b515a57659d8f710f"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "^0.98.0",
+    "@graphprotocol/graph-ts": "^0.36.0"
+  }
+}
+
