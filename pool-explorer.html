@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏊 Curve Pool Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f0f23;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #667eea; }
+            to { text-shadow: 0 0 20px #fff, 0 0 30px #764ba2, 0 0 40px #764ba2; }
+        }
+        
+        .search-box {
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.1em;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            color: #fff;
+            outline: none;
+            transition: all 0.3s;
+        }
+        
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .pool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        .pool-card {
+            background: linear-gradient(145deg, #1a1a2e, #16161f);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pool-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.6s;
+        }
+        
+        .pool-card:hover::before {
+            left: 100%;
+        }
+        
+        .pool-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+            border-color: #667eea;
+        }
+        
+        .pool-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .pool-type-badge {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .pool-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #fff;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .pool-tokens {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .token-badge {
+            background: rgba(102, 126, 234, 0.2);
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+        
+        .token-composition {
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .composition-bar {
+            height: 30px;
+            background: #0f0f23;
+            border-radius: 15px;
+            overflow: hidden;
+            display: flex;
+            margin-top: 10px;
+        }
+        
+        .token-segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .token-segment:hover {
+            filter: brightness(1.2);
+        }
+        
+        .pool-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .stat {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .stat-label {
+            font-size: 0.85em;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 1.5em;
+            opacity: 0.7;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            max-width: 800px;
+            margin: 50px auto;
+            background: linear-gradient(145deg, #1a1a2e, #16161f);
+            border-radius: 20px;
+            padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2em;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 0, 0, 0.3);
+            transform: rotate(90deg);
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .colors {
+            --color1: #FF6B6B;
+            --color2: #4ECDC4;
+            --color3: #45B7D1;
+            --color4: #FFA07A;
+            --color5: #98D8C8;
+            --color6: #F7B731;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏊 Curve Pool Explorer</h1>
+            <p>Explore liquidity pools on Curve Polygon</p>
+        </header>
+        
+        <div class="search-box">
+            <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search pools by name or token...">
+        </div>
+        
+        <div id="poolGrid" class="pool-grid">
+            <div class="loading">Loading pools...</div>
+        </div>
+    </div>
+    
+    <div id="poolModal" class="modal">
+        <div class="modal-content">
+            <div class="close-btn" onclick="closeModal()">×</div>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const SUBGRAPH_URL = 'https://api.studio.thegraph.com/query/111767/curve-finance-polygon/v0.0.5';
+        let allPools = [];
+        
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7B731', '#FF8C94', '#6C5CE7'];
+        
+        async function query(q) {
+            const response = await fetch(SUBGRAPH_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: q })
+            });
+            const result = await response.json();
+            return result.data;
+        }
+        
+        function formatNumber(num) {
+            const n = parseFloat(num);
+            if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+            if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
+            return '$' + n.toFixed(2);
+        }
+        
+        function createPoolCard(pool) {
+            const totalBalance = pool.tokens.reduce((sum, t) => sum + parseFloat(t.balanceUSD), 0);
+            
+            const tokenSegments = pool.tokens
+                .sort((a, b) => parseFloat(b.balanceUSD) - parseFloat(a.balanceUSD))
+                .map((token, i) => {
+                    const percent = totalBalance > 0 ? (parseFloat(token.balanceUSD) / totalBalance * 100) : 0;
+                    return `
+                        <div class="token-segment" style="width: ${percent}%; background: ${colors[i % colors.length]};" 
+                             title="${token.token.symbol}: ${formatNumber(token.balanceUSD)} (${percent.toFixed(1)}%)">
+                            ${percent > 15 ? token.token.symbol : ''}
+                        </div>
+                    `;
+                }).join('');
+            
+            const tokenBadges = pool.tokens.map(t => `
+                <span class="token-badge">${t.token.symbol}</span>
+            `).join('');
+            
+            return `
+                <div class="pool-card" onclick="showPoolDetails('${pool.id}')">
+                    <div class="pool-header">
+                        <div class="pool-type-badge">${pool.poolType}</div>
+                    </div>
+                    <div class="pool-name">${pool.name || 'Curve Pool'}</div>
+                    <div class="pool-tokens">${tokenBadges}</div>
+                    <div class="token-composition">
+                        <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 5px;">Token Composition:</div>
+                        <div class="composition-bar">${tokenSegments}</div>
+                    </div>
+                    <div class="pool-stats">
+                        <div class="stat">
+                            <div class="stat-label">💰 Volume</div>
+                            <div class="stat-value">${formatNumber(pool.cumulativeVolumeUSD)}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">🏊 TVL</div>
+                            <div class="stat-value">${formatNumber(pool.totalValueLockedUSD)}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">🔄 Swaps</div>
+                            <div class="stat-value">${pool.swapCount.toLocaleString()}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">👥 Users</div>
+                            <div class="stat-value">${pool.userCount}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function loadPools() {
+            const data = await query(`{
+                pools(first: 30, orderBy: cumulativeVolumeUSD, orderDirection: desc) {
+                    id
+                    name
+                    poolType
+                    cumulativeVolumeUSD
+                    totalValueLockedUSD
+                    swapCount
+                    userCount
+                    tokens {
+                        token {
+                            symbol
+                            decimals
+                            address
+                        }
+                        balance
+                        balanceUSD
+                    }
+                }
+            }`);
+            
+            allPools = data.pools;
+            displayPools(allPools);
+        }
+        
+        function displayPools(pools) {
+            const html = pools.map(createPoolCard).join('');
+            document.getElementById('poolGrid').innerHTML = html;
+        }
+        
+        async function showPoolDetails(poolId) {
+            const pool = allPools.find(p => p.id === poolId);
+            if (!pool) return;
+            
+            const totalBalance = pool.tokens.reduce((sum, t) => sum + parseFloat(t.balanceUSD), 0);
+            
+            const tokenDetails = pool.tokens
+                .sort((a, b) => parseFloat(b.balanceUSD) - parseFloat(a.balanceUSD))
+                .map((token, i) => {
+                    const percent = totalBalance > 0 ? (parseFloat(token.balanceUSD) / totalBalance * 100) : 0;
+                    return `
+                        <div class="detail-row">
+                            <div>
+                                <div style="font-size: 1.2em; font-weight: bold; color: ${colors[i % colors.length]};">
+                                    ${token.token.symbol}
+                                </div>
+                                <div style="font-size: 0.85em; opacity: 0.6; font-family: monospace;">
+                                    ${token.token.address.slice(0, 20)}...
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.3em; font-weight: bold;">${formatNumber(token.balanceUSD)}</div>
+                                <div style="font-size: 0.9em; opacity: 0.8;">${parseFloat(token.balance).toFixed(4)} (${percent.toFixed(1)}%)</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            
+            const modalHtml = `
+                <h2 style="margin-bottom: 30px;">${pool.name || 'Curve Pool'}</h2>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                    <div class="stat">
+                        <div class="stat-label">💰 Total Volume</div>
+                        <div class="stat-value">${formatNumber(pool.cumulativeVolumeUSD)}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">🏊 Total TVL</div>
+                        <div class="stat-value">${formatNumber(pool.totalValueLockedUSD)}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">🔄 Total Swaps</div>
+                        <div class="stat-value">${pool.swapCount.toLocaleString()}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">👥 Unique Users</div>
+                        <div class="stat-value">${pool.userCount}</div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-bottom: 20px;">Token Breakdown:</h3>
+                ${tokenDetails}
+                
+                <div style="margin-top: 20px; padding: 15px; background: rgba(102, 126, 234, 0.1); border-radius: 10px; font-size: 0.9em;">
+                    <strong>Pool Address:</strong><br>
+                    <span style="font-family: monospace; word-break: break-all;">${pool.id}</span>
+                </div>
+            `;
+            
+            document.getElementById('modalContent').innerHTML = modalHtml;
+            document.getElementById('poolModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('poolModal').style.display = 'none';
+        }
+        
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = allPools.filter(pool => {
+                const poolName = (pool.name || '').toLowerCase();
+                const tokens = pool.tokens.map(t => t.token.symbol.toLowerCase()).join(' ');
+                return poolName.includes(searchTerm) || tokens.includes(searchTerm);
+            });
+            displayPools(filtered);
+        });
+        
+        // Close modal on outside click
+        document.getElementById('poolModal').addEventListener('click', (e) => {
+            if (e.target.id === 'poolModal') {
+                closeModal();
+            }
+        });
+        
+        loadPools();
+    </script>
+</body>
+</html>
+
