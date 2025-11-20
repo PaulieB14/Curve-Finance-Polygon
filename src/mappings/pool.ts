@@ -25,6 +25,45 @@ import { convertTokenToDecimal } from "../utils/helpers";
 import { getAverageSwapPriceUSD, getAmountInUSD } from "../utils/pricing";
 
 /**
+ * Calculate and update pool TVL by summing all poolToken balances
+ */
+function updatePoolTVL(pool: Pool): void {
+  let totalTVL = ZERO_BD;
+  let totalTVLUSD = ZERO_BD;
+  
+  // Load all pool tokens using @derivedFrom
+  let poolTokens = pool.tokens.load();
+  
+  for (let i = 0; i < poolTokens.length; i++) {
+    totalTVL = totalTVL.plus(poolTokens[i].balance);
+    totalTVLUSD = totalTVLUSD.plus(poolTokens[i].balanceUSD);
+  }
+  
+  pool.totalValueLocked = totalTVL;
+  pool.totalValueLockedUSD = totalTVLUSD;
+}
+
+/**
+ * Update protocol TVL by summing all pool TVLs
+ */
+function updateProtocolTVL(): void {
+  let protocol = getOrCreateProtocol();
+  let pools = protocol.pools.load();
+  
+  let totalTVL = ZERO_BD;
+  let totalTVLUSD = ZERO_BD;
+  
+  for (let i = 0; i < pools.length; i++) {
+    totalTVL = totalTVL.plus(pools[i].totalValueLocked);
+    totalTVLUSD = totalTVLUSD.plus(pools[i].totalValueLockedUSD);
+  }
+  
+  protocol.totalValueLocked = totalTVL;
+  protocol.totalValueLockedUSD = totalTVLUSD;
+  protocol.save();
+}
+
+/**
  * Handle Token Exchange (Swap)
  * Best Practice: Use foreign keys, not arrays. Use loadRelated for derived entities.
  */
@@ -250,6 +289,10 @@ export function handleAddLiquidity(event: AddLiquidity): void {
   // Update pool metrics
   pool.lpTokenSupply = pool.lpTokenSupply.plus(lpTokenAmount);
   pool.txCount = pool.txCount.plus(ONE_BI);
+  
+  // Recalculate TVL from all poolToken balances
+  updatePoolTVL(pool);
+  
   pool.save();
   
   // Update user metrics (aggregated, not arrays)
@@ -259,6 +302,9 @@ export function handleAddLiquidity(event: AddLiquidity): void {
   let protocol = getOrCreateProtocol();
   protocol.txCount = protocol.txCount.plus(ONE_BI);
   protocol.save();
+  
+  // Update protocol TVL
+  updateProtocolTVL();
   
   log.info("Add liquidity processed: {}", [eventId]);
 }
@@ -352,6 +398,10 @@ export function handleRemoveLiquidity(event: RemoveLiquidity): void {
   
   pool.lpTokenSupply = pool.lpTokenSupply.minus(lpTokenAmount);
   pool.txCount = pool.txCount.plus(ONE_BI);
+  
+  // Recalculate TVL from all poolToken balances
+  updatePoolTVL(pool);
+  
   pool.save();
   
   user.liquidityEventCount = user.liquidityEventCount.plus(ONE_BI);
@@ -360,6 +410,9 @@ export function handleRemoveLiquidity(event: RemoveLiquidity): void {
   let protocol = getOrCreateProtocol();
   protocol.txCount = protocol.txCount.plus(ONE_BI);
   protocol.save();
+  
+  // Update protocol TVL
+  updateProtocolTVL();
 }
 
 /**
