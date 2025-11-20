@@ -234,7 +234,20 @@ export function handleAddLiquidity(event: AddLiquidity): void {
   for (let i = 0; i < tokenAmounts.length; i++) {
     if (i >= poolTokens.length) break;
     
-    let poolToken = poolTokens[i];
+    // FIX: Match by index, not array position! @derivedFrom doesn't guarantee order
+    let poolToken: PoolToken | null = null;
+    for (let j = 0; j < poolTokens.length; j++) {
+      if (poolTokens[j].index == i) {
+        poolToken = poolTokens[j];
+        break;
+      }
+    }
+    
+    if (poolToken == null) {
+      log.warning("PoolToken with index {} not found for pool {}", [i.toString(), poolAddress.toHexString()]);
+      continue;
+    }
+    
     let token = getOrCreateToken(Address.fromString(poolToken.token));
     
     // Create individual LiquidityTokenAmount entity
@@ -348,7 +361,20 @@ export function handleRemoveLiquidity(event: RemoveLiquidity): void {
   for (let i = 0; i < tokenAmounts.length; i++) {
     if (i >= poolTokens.length) break;
     
-    let poolToken = poolTokens[i];
+    // FIX: Match by index, not array position! @derivedFrom doesn't guarantee order
+    let poolToken: PoolToken | null = null;
+    for (let j = 0; j < poolTokens.length; j++) {
+      if (poolTokens[j].index == i) {
+        poolToken = poolTokens[j];
+        break;
+      }
+    }
+    
+    if (poolToken == null) {
+      log.warning("PoolToken with index {} not found for pool {}", [i.toString(), poolAddress.toHexString()]);
+      continue;
+    }
+    
     let token = getOrCreateToken(Address.fromString(poolToken.token));
     
     let tokenAmountId = eventId + "-" + i.toString();
