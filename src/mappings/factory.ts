@@ -4,6 +4,7 @@ import {
   MetaPoolDeployed,
   StableSwapFactory,
 } from "../../generated/StableSwapFactory/StableSwapFactory";
+import { StableSwapPool } from "../../generated/StableSwapFactory/StableSwapPool";
 import {
   TwocryptoPoolDeployed,
 } from "../../generated/TwoCryptoFactory/TwoCryptoFactory";
@@ -22,6 +23,7 @@ import {
   createPoolToken,
 } from "../utils/entities";
 import { ZERO_BI, ZERO_BD, ONE_BI } from "../utils/constants";
+import { getPoolName, getPoolSymbol } from "../utils/helpers";
 
 /**
  * Handle StableSwap Plain Pool Deployed
@@ -40,8 +42,10 @@ export function handlePlainPoolDeployed(event: PlainPoolDeployed): void {
   pool.protocol = "curve-finance-polygon";
   pool.address = poolAddress;
   pool.poolType = "STABLESWAP";
-  pool.name = "Curve StableSwap Pool";
-  pool.symbol = null;
+  
+  // Get pool name and symbol from contract (pool is LP token for plain pools)
+  pool.name = getPoolName(poolAddress, poolAddress);
+  pool.symbol = getPoolSymbol(poolAddress, poolAddress);
   
   // Pool parameters
   pool.lpToken = poolAddress; // For plain pools, pool is LP token
@@ -119,8 +123,10 @@ export function handleMetaPoolDeployed(event: MetaPoolDeployed): void {
   pool.protocol = "curve-finance-polygon";
   pool.address = poolAddress;
   pool.poolType = "STABLESWAP";
-  pool.name = "Curve MetaPool";
-  pool.symbol = null;
+  
+  // Get pool name and symbol from contract
+  pool.name = getPoolName(poolAddress, poolAddress);
+  pool.symbol = getPoolSymbol(poolAddress, poolAddress);
   
   pool.lpToken = poolAddress;
   pool.lpTokenSupply = ZERO_BD;
@@ -145,9 +151,23 @@ export function handleMetaPoolDeployed(event: MetaPoolDeployed): void {
   
   pool.save();
   
-  // Create token entities
+  // Meta pools have 2 tokens: coin (index 0) and base pool LP token (index 1)
+  // Create PoolToken for the coin
   let token = getOrCreateToken(coin);
   createPoolToken(poolAddress, coin, 0, false);
+  
+  // Get base pool LP token address from meta pool contract
+  let poolContract = StableSwapPool.bind(poolAddress);
+  let basePoolLpTokenResult = poolContract.try_coins(BigInt.fromI32(1));
+  
+  if (!basePoolLpTokenResult.reverted) {
+    let basePoolLpToken = basePoolLpTokenResult.value;
+    let baseToken = getOrCreateToken(basePoolLpToken);
+    createPoolToken(poolAddress, basePoolLpToken, 1, false);
+    log.info("MetaPool: Added base pool LP token {} at index 1", [basePoolLpToken.toHexString()]);
+  } else {
+    log.warning("MetaPool: Could not get base pool LP token for pool {}", [poolAddress.toHexString()]);
+  }
   
   // Update protocol
   let protocol = getOrCreateProtocol();
@@ -156,7 +176,11 @@ export function handleMetaPoolDeployed(event: MetaPoolDeployed): void {
   
   StableSwapPoolTemplate.create(poolAddress);
   
-  log.info("MetaPool deployed: {}", [poolAddress.toHexString()]);
+  log.info("MetaPool deployed: {} with coin {} and base pool {}", [
+    poolAddress.toHexString(),
+    coin.toHexString(),
+    basePool.toHexString()
+  ]);
 }
 
 /**
@@ -170,8 +194,10 @@ export function handleTwoCryptoPoolDeployed(event: TwocryptoPoolDeployed): void 
   pool.protocol = "curve-finance-polygon";
   pool.address = poolAddress;
   pool.poolType = "TWOCRYPTO";
-  pool.name = "Curve TwoCrypto Pool";
-  pool.symbol = null;
+  
+  // Get pool name and symbol from LP token
+  pool.name = getPoolName(poolAddress, event.params.token);
+  pool.symbol = getPoolSymbol(poolAddress, event.params.token);
   
   pool.lpToken = event.params.token;
   pool.lpTokenSupply = ZERO_BD;
@@ -222,8 +248,10 @@ export function handleTriCryptoPoolDeployed(event: TricryptoPoolDeployed): void 
   pool.protocol = "curve-finance-polygon";
   pool.address = poolAddress;
   pool.poolType = "TRICRYPTO";
-  pool.name = "Curve TriCrypto Pool";
-  pool.symbol = null;
+  
+  // Get pool name and symbol from LP token
+  pool.name = getPoolName(poolAddress, event.params.token);
+  pool.symbol = getPoolSymbol(poolAddress, event.params.token);
   
   pool.lpToken = event.params.token;
   pool.lpTokenSupply = ZERO_BD;
