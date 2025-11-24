@@ -180,3 +180,60 @@ export function createPoolToken(
   return poolToken;
 }
 
+/**
+ * Initialize a static pool (not deployed via factory)
+ * Used for legacy pools that are indexed directly
+ */
+export function initializeStaticPool(
+  poolAddress: Address,
+  poolType: string,
+  poolName: string,
+  event: ethereum.Event
+): Pool {
+  let pool = new Pool(poolAddress.toHexString());
+  pool.protocol = PROTOCOL_ID;
+  pool.address = poolAddress;
+  pool.poolType = poolType;
+  pool.name = poolName;
+  pool.symbol = null;
+  
+  // Pool parameters - will be updated from contract calls if needed
+  pool.lpToken = poolAddress; // Default: pool is LP token
+  pool.lpTokenSupply = ZERO_BD;
+  pool.A = ZERO_BI;
+  pool.fee = ZERO_BI;
+  pool.adminFee = ZERO_BI;
+  pool.offpegFeeMultiplier = null;
+  
+  // Pricing
+  pool.virtualPrice = ZERO_BD;
+  
+  // Liquidity
+  pool.totalValueLocked = ZERO_BD;
+  pool.totalValueLockedUSD = ZERO_BD;
+  
+  // Volume & Fees
+  pool.cumulativeVolume = ZERO_BD;
+  pool.cumulativeVolumeUSD = ZERO_BD;
+  pool.cumulativeFees = ZERO_BD;
+  pool.cumulativeFeesUSD = ZERO_BD;
+  
+  // Activity
+  pool.txCount = ZERO_BI;
+  pool.swapCount = ZERO_BI;
+  
+  // Metadata
+  pool.createdAt = event.block.timestamp;
+  pool.createdAtBlock = event.block.number;
+  pool.createdAtTransaction = event.transaction.hash;
+  
+  pool.save();
+  
+  // Update protocol
+  let protocol = getOrCreateProtocol();
+  protocol.poolCount = protocol.poolCount.plus(ONE_BI);
+  protocol.save();
+  
+  return pool;
+}
+

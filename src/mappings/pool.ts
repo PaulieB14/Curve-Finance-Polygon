@@ -19,6 +19,7 @@ import {
   getOrCreatePosition,
   getOrCreateToken,
   getOrCreateProtocol,
+  initializeStaticPool,
 } from "../utils/entities";
 import { ZERO_BI, ZERO_BD, ONE_BI } from "../utils/constants";
 import { convertTokenToDecimal } from "../utils/helpers";
@@ -71,9 +72,15 @@ export function handleTokenExchange(event: TokenExchange): void {
   let poolAddress = event.address;
   let pool = Pool.load(poolAddress.toHexString());
   
+  // Initialize static pool if it doesn't exist (for legacy pools indexed directly)
   if (pool == null) {
-    log.error("Pool not found: {}", [poolAddress.toHexString()]);
-    return;
+    pool = initializeStaticPool(
+      poolAddress,
+      "STABLESWAP",
+      "Curve Legacy Pool",
+      event
+    );
+    log.info("Initialized static pool: {}", [poolAddress.toHexString()]);
   }
   
   // Create transaction entity (Best Practice: Reuse transaction data)
@@ -196,9 +203,15 @@ export function handleAddLiquidity(event: AddLiquidity): void {
   let poolAddress = event.address;
   let pool = Pool.load(poolAddress.toHexString());
   
+  // Initialize static pool if it doesn't exist
   if (pool == null) {
-    log.error("Pool not found: {}", [poolAddress.toHexString()]);
-    return;
+    pool = initializeStaticPool(
+      poolAddress,
+      "STABLESWAP",
+      "Curve Legacy Pool",
+      event
+    );
+    log.info("Initialized static pool: {}", [poolAddress.toHexString()]);
   }
   
   let transaction = getOrCreateTransaction(event);
@@ -329,8 +342,15 @@ export function handleRemoveLiquidity(event: RemoveLiquidity): void {
   let poolAddress = event.address;
   let pool = Pool.load(poolAddress.toHexString());
   
+  // Initialize static pool if it doesn't exist
   if (pool == null) {
-    return;
+    pool = initializeStaticPool(
+      poolAddress,
+      "STABLESWAP",
+      "Curve Legacy Pool",
+      event
+    );
+    log.info("Initialized static pool: {}", [poolAddress.toHexString()]);
   }
   
   let transaction = getOrCreateTransaction(event);
@@ -448,8 +468,15 @@ export function handleRemoveLiquidityOne(event: RemoveLiquidityOne): void {
   let poolAddress = event.address;
   let pool = Pool.load(poolAddress.toHexString());
   
+  // Initialize static pool if it doesn't exist
   if (pool == null) {
-    return;
+    pool = initializeStaticPool(
+      poolAddress,
+      "STABLESWAP",
+      "Curve Legacy Pool",
+      event
+    );
+    log.info("Initialized static pool: {}", [poolAddress.toHexString()]);
   }
   
   let transaction = getOrCreateTransaction(event);
@@ -508,8 +535,15 @@ export function handleRemoveLiquidityImbalance(event: RemoveLiquidityImbalance):
   let poolAddress = event.address;
   let pool = Pool.load(poolAddress.toHexString());
   
+  // Initialize static pool if it doesn't exist
   if (pool == null) {
-    return;
+    pool = initializeStaticPool(
+      poolAddress,
+      "STABLESWAP",
+      "Curve Legacy Pool",
+      event
+    );
+    log.info("Initialized static pool: {}", [poolAddress.toHexString()]);
   }
   
   let transaction = getOrCreateTransaction(event);
