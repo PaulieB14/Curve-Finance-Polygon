@@ -93,3 +93,51 @@ export function getHourStartTimestamp(timestamp: BigInt): BigInt {
   return BigInt.fromI32(hourId * 3600);
 }
 
+/**
+ * Get pool name from contract (tries name() function, falls back to LP token name)
+ */
+export function getPoolName(poolAddress: Address, lpTokenAddress: Address): string {
+  // Try to get name from pool contract directly
+  let poolContract = ERC20.bind(poolAddress);
+  let nameResult = poolContract.try_name();
+  
+  if (!nameResult.reverted && nameResult.value.length > 0) {
+    return nameResult.value;
+  }
+  
+  // Fall back to LP token name
+  let lpTokenContract = ERC20.bind(lpTokenAddress);
+  let lpNameResult = lpTokenContract.try_name();
+  
+  if (!lpNameResult.reverted && lpNameResult.value.length > 0) {
+    return lpNameResult.value;
+  }
+  
+  // Final fallback
+  return "Curve Pool";
+}
+
+/**
+ * Get pool symbol from contract (tries symbol() function, falls back to LP token symbol)
+ */
+export function getPoolSymbol(poolAddress: Address, lpTokenAddress: Address): string | null {
+  // Try to get symbol from pool contract directly
+  let poolContract = ERC20.bind(poolAddress);
+  let symbolResult = poolContract.try_symbol();
+  
+  if (!symbolResult.reverted && symbolResult.value.length > 0) {
+    return symbolResult.value;
+  }
+  
+  // Fall back to LP token symbol
+  let lpTokenContract = ERC20.bind(lpTokenAddress);
+  let lpSymbolResult = lpTokenContract.try_symbol();
+  
+  if (!lpSymbolResult.reverted && lpSymbolResult.value.length > 0) {
+    return lpSymbolResult.value;
+  }
+  
+  return null;
+}
+
+
