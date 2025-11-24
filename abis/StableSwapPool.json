@@ -1,5 +1,14 @@
 [
   {
+    "constant": true,
+    "inputs": [{"name": "i", "type": "uint256"}],
+    "name": "coins",
+    "outputs": [{"name": "", "type": "address"}],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {"indexed": true, "name": "buyer", "type": "address"},
